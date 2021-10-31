@@ -39,9 +39,6 @@ char gC_PaintSizes[][][64] = // Modify this to add more sizes.
 
 int gI_Sprites[sizeof(gC_PaintColours) - 1][sizeof(gC_PaintSizes)];
 
-Menu gH_PaintMenu;
-Menu gH_PaintSizeMenu;
-
 bool gB_IsPainting[MAXPLAYERS + 1];
 float gF_LastPaintPosition[MAXPLAYERS + 1][3];
 
@@ -66,11 +63,7 @@ public void OnPluginStart()
 
 	RegConsoleCmd("+paint", Command_EnablePaint);
 	RegConsoleCmd("-paint", Command_DisablePaint);
-	RegConsoleCmd("sm_paintcolour", Command_PaintColour);
-	RegConsoleCmd("sm_paintcolor", Command_PaintColour);
-	RegConsoleCmd("sm_paintsize", Command_PaintSize);
-
-	CreatePaintMenus();
+	RegConsoleCmd("sm_paint", Command_Paint);
 
 	gH_PaintColour = RegClientCookie("paint_colour", "Paint colour", CookieAccess_Protected);
 	gH_PaintSize = RegClientCookie("paint_size", "Paint size", CookieAccess_Protected);
@@ -119,35 +112,6 @@ public void OnMapStart()
 	CreateTimer(0.1, Timer_Paint, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public Action Command_EnablePaint(int client, int args)
-{
-	TraceEye(client, gF_LastPaintPosition[client]);
-	gB_IsPainting[client] = true;
-
-	return Plugin_Handled;
-}
-
-public Action Command_DisablePaint(int client, int args)
-{
-	gB_IsPainting[client] = false;
-
-	return Plugin_Handled;
-}
-
-public Action Command_PaintColour(int client, int args)
-{
-	gH_PaintMenu.Display(client, 20);
-
-	return Plugin_Handled;
-}
-
-public Action Command_PaintSize(int client, int args)
-{
-	gH_PaintSizeMenu.Display(client, 20);
-
-	return Plugin_Handled;
-}
-
 public Action Timer_Paint(Handle timer)
 {
 	for (int i = 1; i <= MaxClients; i++)
@@ -178,61 +142,155 @@ void AddPaint(float position[3], int colour = 0, int size = 0)
 	TE_SendToAll();
 }
 
-void CreatePaintMenus()
+public Action Command_EnablePaint(int client, int args)
 {
-	/* COLOURS MENU */
-	delete gH_PaintMenu;
-	gH_PaintMenu = new Menu(PaintColourMenuHandle);
+	if (!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
 
-	gH_PaintMenu.SetTitle("Select Paint Colour:");
+	gB_IsPainting[client] = true;
+
+	return Plugin_Handled;
+}
+
+public Action Command_DisablePaint(int client, int args)
+{
+	if (!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	gB_IsPainting[client] = false;
+
+	return Plugin_Handled;
+}
+
+public Action Command_Paint(int client, int args)
+{
+	if (!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	Menu_Paint(client);
+
+	return Plugin_Handled;
+}
+
+void Menu_Paint(int client)
+{
+	Menu menu = new Menu(MenuHandler_Paint);
+
+	menu.SetTitle("Paint");
+	menu.AddItem("paint", gB_IsPainting[client] ? "-paint" : "+paint");
+	menu.AddItem("colour", "Select colour");
+	menu.AddItem("size", "Select size");
+
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+public int MenuHandler_Paint(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char info[32];
+		menu.GetItem(param2, info, sizeof(info));
+
+		if (StrEqual(info, "paint"))
+		{
+			gB_IsPainting[param1] = !gB_IsPainting[param1];
+			Menu_Paint(param1);
+		}
+		else if (StrEqual(info, "colour"))
+		{
+			Menu_PaintColour(param1);
+		}
+		else if (StrEqual(info, "size"))
+		{
+			Menu_PaintSize(param1);
+		}
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+}
+
+void Menu_PaintColour(int client)
+{
+	Menu menu = new Menu(MenuHandler_PaintColour);
+
+	menu.SetTitle("Paint - Select Colour");
 
 	for (int i = 0; i < sizeof(gC_PaintColours); i++)
 	{
-		gH_PaintMenu.AddItem(gC_PaintColours[i][0], gC_PaintColours[i][0]);
+		menu.AddItem(gC_PaintColours[i][0], gC_PaintColours[i][0]);
 	}
 
-	/* SIZE MENU */
-	delete gH_PaintSizeMenu;
-	gH_PaintSizeMenu = new Menu(PaintSizeMenuHandle);
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
 
-	gH_PaintSizeMenu.SetTitle("Select Paint Size:");
+public int MenuHandler_PaintColour(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		gI_PaintColour[param1] = param2;
+		SetClientCookieInt(param1, gH_PaintColour, param2);
+		PrintToChat(param1, "[SM] Paint colour: %s", gC_PaintColours[param2][0]);
+
+		Menu_PaintColour(param1);
+	}
+	else if (action == MenuAction_Cancel)
+	{
+		if (param2 == MenuCancel_ExitBack)
+		{
+			Menu_Paint(param1);
+		}
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+}
+
+void Menu_PaintSize(int client)
+{
+	Menu menu = new Menu(MenuHandler_PaintSize);
+
+	menu.SetTitle("Paint - Select Size");
 
 	for (int i = 0; i < sizeof(gC_PaintSizes); i++)
 	{
-		gH_PaintSizeMenu.AddItem(gC_PaintSizes[i][0], gC_PaintSizes[i][0]);
+		menu.AddItem(gC_PaintSizes[i][0], gC_PaintSizes[i][0]);
 	}
+
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public int PaintColourMenuHandle(Menu menu, MenuAction menuAction, int param1, int param2)
+public int MenuHandler_PaintSize(Menu menu, MenuAction action, int param1, int param2)
 {
-	if (menuAction == MenuAction_Select)
+	if (action == MenuAction_Select)
 	{
-		SetClientPaintColour(param1, param2);
-	}
-}
+		gI_PaintSize[param1] = param2;
+		SetClientCookieInt(param1, gH_PaintSize, param2);
+		PrintToChat(param1, "[SM] Paint size: %s", gC_PaintSizes[param2][0]);
 
-public int PaintSizeMenuHandle(Menu menu, MenuAction menuAction, int param1, int param2)
-{
-	if (menuAction == MenuAction_Select)
+		Menu_PaintSize(param1);
+	}
+	else if (action == MenuAction_Cancel)
 	{
-		SetClientPaintSize(param1, param2);
+		if (param2 == MenuCancel_ExitBack)
+		{
+			Menu_Paint(param1);
+		}
 	}
-}
-
-void SetClientPaintColour(int client, int colour)
-{
-	gI_PaintColour[client] = colour;
-	SetClientCookieInt(param1, gH_PaintColour, colour);
-
-	PrintToChat(client, "[SM] Paint colour now: %s", gC_PaintColours[colour][0]);
-}
-
-void SetClientPaintSize(int client, int size)
-{
-	gI_PaintSize[client] = size;
-	SetClientCookieInt(param1, gH_PaintSize, size);
-
-	PrintToChat(client, "[SM] Paint size now: %s", gC_PaintSizes[size][0]);
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
 }
 
 int PrecachePaint(char[] filename)
@@ -270,6 +328,11 @@ stock void TraceEye(int client, float position[3])
 public bool TraceEntityFilterPlayer(int entity, int contentsMask)
 {
 	return (entity > MaxClients || !entity);
+}
+
+stock bool IsValidClient(int client)
+{
+	return (0 < client <= MaxClients && IsClientInGame(client) && !IsFakeClient(client));
 }
 
 stock void SetClientCookieInt(int client, Handle cookie, int value)
