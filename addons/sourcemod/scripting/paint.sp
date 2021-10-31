@@ -9,21 +9,8 @@
 #define PLUGIN_VERSION "2.0"
 #define PAINT_DISTANCE_SQ 1.0
 
-Menu g_hPaintMenu;
-Menu g_hPaintSizeMenu;
-
-float g_fLastPaint[MAXPLAYERS + 1][3];
-bool g_bIsPainting[MAXPLAYERS + 1];
-
-int gI_PaintColour[MAXPLAYERS + 1];
-int gI_PaintSize[MAXPLAYERS + 1];
-
-Handle gH_PaintColour;
-Handle gH_PaintSize;
-
-/* COLOURS! */
-/* Colour name, file name */
-char g_cPaintColours[][][64] = // Modify this to add/change colours
+// Colour name, file name.
+char gC_PaintColours[][][64] = // Modify this to add/change colours.
 {
 	{ "Random", "random" },
 	{ "White", "paint_white" },
@@ -42,15 +29,27 @@ char g_cPaintColours[][][64] = // Modify this to add/change colours
 	{ "Purple", "paint_purple" },
 };
 
-/* Size name, size suffix */
-char g_cPaintSizes[][][64] = // Modify this to add more sizes
+// Size name, size suffix.
+char gC_PaintSizes[][][64] = // Modify this to add more sizes.
 {
 	{ "Small", "" },
 	{ "Medium", "_med" },
 	{ "Large", "_large" },
 };
 
-int  g_Sprites[sizeof(g_cPaintColours) - 1][sizeof(g_cPaintSizes)];
+int gI_Sprites[sizeof(gC_PaintColours) - 1][sizeof(gC_PaintSizes)];
+
+Menu gH_PaintMenu;
+Menu gH_PaintSizeMenu;
+
+bool gB_IsPainting[MAXPLAYERS + 1];
+float gF_LastPaintPosition[MAXPLAYERS + 1][3];
+
+int gI_PaintColour[MAXPLAYERS + 1];
+int gI_PaintSize[MAXPLAYERS + 1];
+
+Handle gH_PaintColour;
+Handle gH_PaintSize;
 
 public Plugin myinfo =
 {
@@ -65,11 +64,11 @@ public void OnPluginStart()
 {
 	CreateConVar("paint_version", PLUGIN_VERSION, "Paint plugin version", FCVAR_NOTIFY);
 
-	RegConsoleCmd("+paint", cmd_EnablePaint);
-	RegConsoleCmd("-paint", cmd_DisablePaint);
-	RegConsoleCmd("sm_paintcolour", cmd_PaintColour);
-	RegConsoleCmd("sm_paintcolor", cmd_PaintColour);
-	RegConsoleCmd("sm_paintsize", cmd_PaintSize);
+	RegConsoleCmd("+paint", Command_EnablePaint);
+	RegConsoleCmd("-paint", Command_DisablePaint);
+	RegConsoleCmd("sm_paintcolour", Command_PaintColour);
+	RegConsoleCmd("sm_paintcolor", Command_PaintColour);
+	RegConsoleCmd("sm_paintsize", Command_PaintSize);
 
 	CreatePaintMenus();
 
@@ -105,46 +104,46 @@ public void OnClientCookiesCached(int client)
 
 public void OnMapStart()
 {
-	char buffer[PLATFORM_MAX_PATH];
-
 	AddFileToDownloadsTable("materials/decals/paint/paint_decal.vtf");
-	for (int colour = 1; colour < sizeof(g_cPaintColours); colour++)
+
+	char buffer[PLATFORM_MAX_PATH];
+	for (int colour = 1; colour < sizeof(gC_PaintColours); colour++)
 	{
-		for (int size = 0; size < sizeof(g_cPaintSizes); size++)
+		for (int size = 0; size < sizeof(gC_PaintSizes); size++)
 		{
-			Format(buffer, sizeof(buffer), "decals/paint/%s%s.vmt", g_cPaintColours[colour][1], g_cPaintSizes[size][1]);
-			g_Sprites[colour - 1][size] = PrecachePaint(buffer); // colour - 1 because starts from [1], [0] is reserved for random
+			Format(buffer, sizeof(buffer), "decals/paint/%s%s.vmt", gC_PaintColours[colour][1], gC_PaintSizes[size][1]);
+			gI_Sprites[colour - 1][size] = PrecachePaint(buffer); // colour - 1 because starts from [1], [0] is reserved for random.
 		}
 	}
 
-	CreateTimer(0.1, Timer_Paint, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.1, Timer_Paint, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public Action cmd_EnablePaint(int client, int args)
+public Action Command_EnablePaint(int client, int args)
 {
-	TraceEye(client, g_fLastPaint[client]);
-	g_bIsPainting[client] = true;
+	TraceEye(client, gF_LastPaintPosition[client]);
+	gB_IsPainting[client] = true;
 
 	return Plugin_Handled;
 }
 
-public Action cmd_DisablePaint(int client, int args)
+public Action Command_DisablePaint(int client, int args)
 {
-	g_bIsPainting[client] = false;
+	gB_IsPainting[client] = false;
 
 	return Plugin_Handled;
 }
 
-public Action cmd_PaintColour(int client, int args)
+public Action Command_PaintColour(int client, int args)
 {
-	g_hPaintMenu.Display(client, 20);
+	gH_PaintMenu.Display(client, 20);
 
 	return Plugin_Handled;
 }
 
-public Action cmd_PaintSize(int client, int args)
+public Action Command_PaintSize(int client, int args)
 {
-	g_hPaintSizeMenu.Display(client, 20);
+	gH_PaintSizeMenu.Display(client, 20);
 
 	return Plugin_Handled;
 }
@@ -153,63 +152,54 @@ public Action Timer_Paint(Handle timer)
 {
 	for (int i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientInGame(i) && IsPlayerAlive(i) && g_bIsPainting[i])
+		if (IsClientInGame(i) && IsPlayerAlive(i) && gB_IsPainting[i])
 		{
-			static float pos[3];
-			TraceEye(i, pos);
+			static float position[3];
+			TraceEye(i, position);
 
-			if (GetVectorDistance(pos, g_fLastPaint[i], true) > PAINT_DISTANCE_SQ)
+			if (GetVectorDistance(position, gF_LastPaintPosition[i], true) > PAINT_DISTANCE_SQ)
 			{
-				AddPaint(pos, gI_PaintColour[i], gI_PaintSize[i]);
+				AddPaint(position, gI_PaintColour[i], gI_PaintSize[i]);
 
-				g_fLastPaint[i] = pos;
+				gF_LastPaintPosition[i] = position;
 			}
 		}
 	}
 }
 
-void AddPaint(float pos[3], int paint = 0, int size = 0)
+void AddPaint(float position[3], int colour = 0, int size = 0)
 {
-	if (paint == 0)
+	if (colour == 0)
 	{
-		paint = GetRandomInt(1, sizeof(g_cPaintColours) - 1);
+		colour = GetRandomInt(1, sizeof(gC_PaintColours) - 1);
 	}
 
-	TE_SetupWorldDecal(pos, g_Sprites[paint - 1][size]);
+	TE_SetupWorldDecal(position, gI_Sprites[colour - 1][size]);
 	TE_SendToAll();
-}
-
-int PrecachePaint(char[] filename)
-{
-	char tmpPath[PLATFORM_MAX_PATH];
-	Format(tmpPath, sizeof(tmpPath), "materials/%s", filename);
-	AddFileToDownloadsTable(tmpPath);
-
-	return PrecacheDecal(filename, true);
 }
 
 void CreatePaintMenus()
 {
 	/* COLOURS MENU */
-	delete g_hPaintMenu;
-	g_hPaintMenu = new Menu(PaintColourMenuHandle);
+	delete gH_PaintMenu;
+	gH_PaintMenu = new Menu(PaintColourMenuHandle);
 
-	g_hPaintMenu.SetTitle("Select Paint Colour:");
+	gH_PaintMenu.SetTitle("Select Paint Colour:");
 
-	for (int i = 0; i < sizeof(g_cPaintColours); i++)
+	for (int i = 0; i < sizeof(gC_PaintColours); i++)
 	{
-		g_hPaintMenu.AddItem(g_cPaintColours[i][0], g_cPaintColours[i][0]);
+		gH_PaintMenu.AddItem(gC_PaintColours[i][0], gC_PaintColours[i][0]);
 	}
 
 	/* SIZE MENU */
-	delete g_hPaintSizeMenu;
-	g_hPaintSizeMenu = new Menu(PaintSizeMenuHandle);
+	delete gH_PaintSizeMenu;
+	gH_PaintSizeMenu = new Menu(PaintSizeMenuHandle);
 
-	g_hPaintSizeMenu.SetTitle("Select Paint Size:");
+	gH_PaintSizeMenu.SetTitle("Select Paint Size:");
 
-	for (int i = 0; i < sizeof(g_cPaintSizes); i++)
+	for (int i = 0; i < sizeof(gC_PaintSizes); i++)
 	{
-		g_hPaintSizeMenu.AddItem(g_cPaintSizes[i][0], g_cPaintSizes[i][0]);
+		gH_PaintSizeMenu.AddItem(gC_PaintSizes[i][0], gC_PaintSizes[i][0]);
 	}
 }
 
@@ -234,7 +224,7 @@ void SetClientPaintColour(int client, int colour)
 	gI_PaintColour[client] = colour;
 	SetClientCookieInt(param1, gH_PaintColour, colour);
 
-	PrintToChat(client, "[SM] Paint colour now: %s", g_cPaintColours[colour][0]);
+	PrintToChat(client, "[SM] Paint colour now: %s", gC_PaintColours[colour][0]);
 }
 
 void SetClientPaintSize(int client, int size)
@@ -242,27 +232,38 @@ void SetClientPaintSize(int client, int size)
 	gI_PaintSize[client] = size;
 	SetClientCookieInt(param1, gH_PaintSize, size);
 
-	PrintToChat(client, "[SM] Paint size now: %s", g_cPaintSizes[size][0]);
+	PrintToChat(client, "[SM] Paint size now: %s", gC_PaintSizes[size][0]);
 }
 
-stock void TE_SetupWorldDecal(const float vecOrigin[3], int index)
+int PrecachePaint(char[] filename)
+{
+	char path[PLATFORM_MAX_PATH];
+	Format(path, sizeof(path), "materials/%s", filename);
+	AddFileToDownloadsTable(path);
+
+	return PrecacheDecal(filename, true);
+}
+
+stock void TE_SetupWorldDecal(const float origin[3], int index)
 {
 	TE_Start("World Decal");
-	TE_WriteVector("m_vecOrigin", vecOrigin);
+	TE_WriteVector("m_vecOrigin", origin);
 	TE_WriteNum("m_nIndex", index);
 }
 
-stock void TraceEye(int client, float pos[3])
+stock void TraceEye(int client, float position[3])
 {
-	float vAngles[3], vOrigin[3];
-	GetClientEyePosition(client, vOrigin);
-	GetClientEyeAngles(client, vAngles);
+	float origin[3];
+	GetClientEyePosition(client, origin);
 
-	TR_TraceRayFilter(vOrigin, vAngles, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer);
+	float angles[3];
+	GetClientEyeAngles(client, angles);
+
+	TR_TraceRayFilter(origin, angles, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer);
 
 	if (TR_DidHit())
 	{
-		TR_GetEndPosition(pos);
+		TR_GetEndPosition(position);
 	}
 }
 
