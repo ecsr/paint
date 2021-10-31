@@ -6,7 +6,6 @@
 #pragma newdecls required
 #pragma semicolon 1
 
-#define PLUGIN_VERSION "2.0"
 #define PAINT_DISTANCE_SQ 1.0
 
 ConVar gCV_SendToAll;
@@ -52,16 +51,15 @@ Handle gH_PaintSize;
 
 public Plugin myinfo =
 {
-	name = "Paint!",
-	author = "SlidyBat",
+	name = "Paint",
+	author = "SlidyBat, Eric",
 	description = "Allow players to paint on walls",
-	version = PLUGIN_VERSION,
-	url = ""
+	version = "3.0.0",
+	url = "https://github.com/ecsr/paint"
 };
 
 public void OnPluginStart()
 {
-	CreateConVar("paint_version", PLUGIN_VERSION, "Paint plugin version", FCVAR_NOTIFY);
 	gCV_SendToAll = CreateConVar("paint_sendtoall", "0", "Should paint decals be sent to everyone?", _, true, 0.0, true, 1.0);
 	AutoExecConfig();
 
