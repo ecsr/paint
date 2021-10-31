@@ -9,6 +9,8 @@
 #define PLUGIN_VERSION "2.0"
 #define PAINT_DISTANCE_SQ 1.0
 
+ConVar gCV_SendToAll;
+
 // Colour name, file name.
 char gC_PaintColours[][][64] = // Modify this to add/change colours.
 {
@@ -60,6 +62,8 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	CreateConVar("paint_version", PLUGIN_VERSION, "Paint plugin version", FCVAR_NOTIFY);
+	gCV_SendToAll = CreateConVar("paint_sendtoall", "0", "Should paint decals be sent to everyone?", _, true, 0.0, true, 1.0);
+	AutoExecConfig();
 
 	RegConsoleCmd("+paint", Command_EnablePaint);
 	RegConsoleCmd("-paint", Command_DisablePaint);
@@ -116,30 +120,43 @@ public Action Timer_Paint(Handle timer)
 {
 	for (int i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientInGame(i) && IsPlayerAlive(i) && gB_IsPainting[i])
+		if (IsValidClient(i) && IsPlayerAlive(i) && gB_IsPainting[i])
 		{
-			static float position[3];
-			TraceEye(i, position);
-
-			if (GetVectorDistance(position, gF_LastPaintPosition[i], true) > PAINT_DISTANCE_SQ)
-			{
-				AddPaint(position, gI_PaintColour[i], gI_PaintSize[i]);
-
-				gF_LastPaintPosition[i] = position;
-			}
+			AddPaint(i);
 		}
 	}
 }
 
-void AddPaint(float position[3], int colour = 0, int size = 0)
+void AddPaint(int client)
 {
+	static float position[3];
+	TraceEye(client, position);
+
+	if (GetVectorDistance(position, gF_LastPaintPosition[client], true) < PAINT_DISTANCE_SQ)
+	{
+		return;
+	}
+
+	int colour = gI_PaintColour[client];
+	int size = gI_PaintSize[client];
+
 	if (colour == 0)
 	{
 		colour = GetRandomInt(1, sizeof(gC_PaintColours) - 1);
 	}
 
 	TE_SetupWorldDecal(position, gI_Sprites[colour - 1][size]);
-	TE_SendToAll();
+
+	if (gCV_SendToAll.BoolValue)
+	{
+		TE_SendToAll();
+	}
+	else
+	{
+		TE_SendToClient(client);
+	}
+
+	gF_LastPaintPosition[client] = position;
 }
 
 public Action Command_EnablePaint(int client, int args)
