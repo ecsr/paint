@@ -60,7 +60,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	gCV_SendToAll = CreateConVar("paint_sendtoall", "0", "Should paint decals be sent to everyone?", _, true, 0.0, true, 1.0);
+	gCV_SendToAll = CreateConVar("paint_sendtoall", "1", "Should paint decals be sent to everyone?", _, true, 0.0, true, 1.0);
 	AutoExecConfig();
 
 	RegConsoleCmd("+paint", Command_EnablePaint);
