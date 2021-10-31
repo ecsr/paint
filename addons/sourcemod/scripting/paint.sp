@@ -1,4 +1,5 @@
 #include <sourcemod>
+
 #include <clientprefs>
 #include <sdktools>
 
@@ -6,22 +7,19 @@
 #pragma semicolon 1
 
 #define PLUGIN_VERSION "2.0"
-
 #define PAINT_DISTANCE_SQ 1.0
 
-/* GLOBALS */
 Menu g_hPaintMenu;
 Menu g_hPaintSizeMenu;
-
-int g_PlayerPaintColour[MAXPLAYERS + 1];
-int g_PlayerPaintSize[MAXPLAYERS + 1];
 
 float g_fLastPaint[MAXPLAYERS + 1][3];
 bool g_bIsPainting[MAXPLAYERS + 1];
 
-/* COOKIES */
-Handle g_hPlayerPaintColour;
-Handle g_hPlayerPaintSize;
+int gI_PaintColour[MAXPLAYERS + 1];
+int gI_PaintSize[MAXPLAYERS + 1];
+
+Handle gH_PaintColour;
+Handle gH_PaintSize;
 
 /* COLOURS! */
 /* Colour name, file name */
@@ -67,11 +65,6 @@ public void OnPluginStart()
 {
 	CreateConVar("paint_version", PLUGIN_VERSION, "Paint plugin version", FCVAR_NOTIFY);
 
-	/* Register Cookies */
-	g_hPlayerPaintColour = RegClientCookie("paint_playerpaintcolour", "paint_playerpaintcolour", CookieAccess_Protected);
-	g_hPlayerPaintSize = RegClientCookie("paint_playerpaintsize", "paint_playerpaintsize", CookieAccess_Protected);
-
-	/* COMMANDS */
 	RegConsoleCmd("+paint", cmd_EnablePaint);
 	RegConsoleCmd("-paint", cmd_DisablePaint);
 	RegConsoleCmd("sm_paintcolour", cmd_PaintColour);
@@ -80,25 +73,34 @@ public void OnPluginStart()
 
 	CreatePaintMenus();
 
-	/* Late loading */
+	gH_PaintColour = RegClientCookie("paint_colour", "Paint colour", CookieAccess_Protected);
+	gH_PaintSize = RegClientCookie("paint_size", "Paint size", CookieAccess_Protected);
+
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i))
 		{
-			OnClientCookiesCached(i);
+			if (AreClientCookiesCached(i))
+			{
+				OnClientCookiesCached(i);
+			}
 		}
 	}
 }
 
 public void OnClientCookiesCached(int client)
 {
-	char sValue[64];
+	if (!GetClientCookieInt(client, gH_PaintColour, gI_PaintColour[client]))
+	{
+		gI_PaintColour[client] = 0;
+		SetClientCookieInt(client, gH_PaintColour, 0);
+	}
 
-	GetClientCookie(client, g_hPlayerPaintColour, sValue, sizeof(sValue));
-	g_PlayerPaintColour[client] = StringToInt(sValue);
-
-	GetClientCookie(client, g_hPlayerPaintSize, sValue, sizeof(sValue));
-	g_PlayerPaintSize[client] = StringToInt(sValue);
+	if (!GetClientCookieInt(client, gH_PaintSize, gI_PaintSize[client]))
+	{
+		gI_PaintSize[client] = 0;
+		SetClientCookieInt(client, gH_PaintSize, 0);
+	}
 }
 
 public void OnMapStart()
@@ -158,7 +160,7 @@ public Action Timer_Paint(Handle timer)
 
 			if (GetVectorDistance(pos, g_fLastPaint[i], true) > PAINT_DISTANCE_SQ)
 			{
-				AddPaint(pos, g_PlayerPaintColour[i], g_PlayerPaintSize[i]);
+				AddPaint(pos, gI_PaintColour[i], gI_PaintSize[i]);
 
 				g_fLastPaint[i] = pos;
 			}
@@ -227,24 +229,20 @@ public int PaintSizeMenuHandle(Menu menu, MenuAction menuAction, int param1, int
 	}
 }
 
-void SetClientPaintColour(int client, int paint)
+void SetClientPaintColour(int client, int colour)
 {
-	char sValue[64];
-	g_PlayerPaintColour[client] = paint;
-	IntToString(paint, sValue, sizeof(sValue));
-	SetClientCookie(client, g_hPlayerPaintColour, sValue);
+	gI_PaintColour[client] = colour;
+	SetClientCookieInt(param1, gH_PaintColour, colour);
 
-	PrintToChat(client, "[SM] Paint colour now: \x10%s", g_cPaintColours[paint][0]);
+	PrintToChat(client, "[SM] Paint colour now: %s", g_cPaintColours[colour][0]);
 }
 
 void SetClientPaintSize(int client, int size)
 {
-	char sValue[64];
-	g_PlayerPaintSize[client] = size;
-	IntToString(size, sValue, sizeof(sValue));
-	SetClientCookie(client, g_hPlayerPaintSize, sValue);
+	gI_PaintSize[client] = size;
+	SetClientCookieInt(param1, gH_PaintSize, size);
 
-	PrintToChat(client, "[SM] Paint size now: \x10%s", g_cPaintSizes[size][0]);
+	PrintToChat(client, "[SM] Paint size now: %s", g_cPaintSizes[size][0]);
 }
 
 stock void TE_SetupWorldDecal(const float vecOrigin[3], int index)
@@ -271,4 +269,26 @@ stock void TraceEye(int client, float pos[3])
 public bool TraceEntityFilterPlayer(int entity, int contentsMask)
 {
 	return (entity > MaxClients || !entity);
+}
+
+stock void SetClientCookieInt(int client, Handle cookie, int value)
+{
+	char buffer[8];
+	IntToString(value, buffer, sizeof(buffer));
+
+	SetClientCookie(client, cookie, buffer);
+}
+
+stock bool GetClientCookieInt(int client, Handle cookie, int& value)
+{
+	char buffer[8];
+	GetClientCookie(client, cookie, buffer, sizeof(buffer));
+
+	if (buffer[0] == '\0')
+	{
+		return false;
+	}
+
+	value = StringToInt(buffer);
+	return true;
 }
