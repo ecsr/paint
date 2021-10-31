@@ -2,7 +2,7 @@
 {
     "$basetexture" "decals/paint/paint_decal"
     "$decal" 1
-    "$decalscale" 0.14
+    "$decalscale" 0.05
     "$translucent" 1
     "$color" "{255 20 147}"
 }
