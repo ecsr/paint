@@ -8,7 +8,6 @@
 #define PLUGIN_VERSION "2.0"
 
 #define PAINT_DISTANCE_SQ 1.0
-#define DEFAULT_FLAG ADMFLAG_CHAT
 
 /* GLOBALS */
 Menu g_hPaintMenu;
@@ -73,7 +72,7 @@ public void OnPluginStart()
 	g_hPlayerPaintSize = RegClientCookie("paint_playerpaintsize", "paint_playerpaintsize", CookieAccess_Protected);
 
 	/* COMMANDS */
-	RegAdminCmd("+paint", cmd_EnablePaint, DEFAULT_FLAG);
+	RegConsoleCmd("+paint", cmd_EnablePaint);
 	RegConsoleCmd("-paint", cmd_DisablePaint);
 	RegConsoleCmd("sm_paintcolour", cmd_PaintColour);
 	RegConsoleCmd("sm_paintcolor", cmd_PaintColour);
@@ -136,28 +135,14 @@ public Action cmd_DisablePaint(int client, int args)
 
 public Action cmd_PaintColour(int client, int args)
 {
-	if (CheckCommandAccess(client, "+paint", DEFAULT_FLAG))
-	{
-		g_hPaintMenu.Display(client, 20);
-	}
-	else
-	{
-		ReplyToCommand(client, "[SM] You do not have access to this command.");
-	}
+	g_hPaintMenu.Display(client, 20);
 
 	return Plugin_Handled;
 }
 
 public Action cmd_PaintSize(int client, int args)
 {
-	if (CheckCommandAccess(client, "+paint", DEFAULT_FLAG))
-	{
-		g_hPaintSizeMenu.Display(client, 20);
-	}
-	else
-	{
-		ReplyToCommand(client, "[SM] You do not have access to this command.");
-	}
+	g_hPaintSizeMenu.Display(client, 20);
 
 	return Plugin_Handled;
 }
