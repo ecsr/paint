@@ -101,14 +101,14 @@ public void OnClientCookiesCached(int client)
 
 public void OnMapStart()
 {
-	AddFileToDownloadsTable("materials/decals/paint/paint_decal.vtf");
+	AddFileToDownloadsTable("materials/paint/paint_decal.vtf");
 
 	char buffer[PLATFORM_MAX_PATH];
 	for (int colour = 1; colour < sizeof(gC_PaintColours); colour++)
 	{
 		for (int size = 0; size < sizeof(gC_PaintSizes); size++)
 		{
-			Format(buffer, sizeof(buffer), "decals/paint/%s%s.vmt", gC_PaintColours[colour][1], gC_PaintSizes[size][1]);
+			Format(buffer, sizeof(buffer), "paint/%s%s.vmt", gC_PaintColours[colour][1], gC_PaintSizes[size][1]);
 			gI_Sprites[colour - 1][size] = PrecachePaint(buffer); // colour - 1 because starts from [1], [0] is reserved for random.
 		}
 	}
