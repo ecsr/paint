@@ -123,6 +123,8 @@ public Action Timer_Paint(Handle timer)
 			AddPaint(i);
 		}
 	}
+
+	return Plugin_Continue;
 }
 
 void AddPaint(int client)
@@ -230,6 +232,8 @@ public int MenuHandler_Paint(Menu menu, MenuAction action, int param1, int param
 	{
 		delete menu;
 	}
+
+	return 0;
 }
 
 void Menu_PaintColour(int client)
@@ -268,6 +272,8 @@ public int MenuHandler_PaintColour(Menu menu, MenuAction action, int param1, int
 	{
 		delete menu;
 	}
+
+	return 0;
 }
 
 void Menu_PaintSize(int client)
@@ -306,6 +312,8 @@ public int MenuHandler_PaintSize(Menu menu, MenuAction action, int param1, int p
 	{
 		delete menu;
 	}
+
+	return 0;
 }
 
 int PrecachePaint(char[] filename)
