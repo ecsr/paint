@@ -323,14 +323,14 @@ int PrecachePaint(char[] filename)
 	return PrecacheDecal(filename, true);
 }
 
-stock void TE_SetupWorldDecal(const float origin[3], int index)
+void TE_SetupWorldDecal(const float origin[3], int index)
 {
 	TE_Start("World Decal");
 	TE_WriteVector("m_vecOrigin", origin);
 	TE_WriteNum("m_nIndex", index);
 }
 
-stock void TraceEye(int client, float position[3])
+void TraceEye(int client, float position[3])
 {
 	float origin[3];
 	GetClientEyePosition(client, origin);
@@ -346,17 +346,17 @@ stock void TraceEye(int client, float position[3])
 	}
 }
 
-public bool TraceEntityFilterPlayer(int entity, int contentsMask)
+bool TraceEntityFilterPlayer(int entity, int contentsMask)
 {
 	return (entity > MaxClients || !entity);
 }
 
-stock bool IsValidClient(int client)
+bool IsValidClient(int client)
 {
 	return (0 < client <= MaxClients && IsClientInGame(client) && !IsFakeClient(client));
 }
 
-stock void SetClientCookieInt(int client, Handle cookie, int value)
+void SetClientCookieInt(int client, Handle cookie, int value)
 {
 	char buffer[8];
 	IntToString(value, buffer, sizeof(buffer));
@@ -364,7 +364,7 @@ stock void SetClientCookieInt(int client, Handle cookie, int value)
 	SetClientCookie(client, cookie, buffer);
 }
 
-stock bool GetClientCookieInt(int client, Handle cookie, int& value)
+bool GetClientCookieInt(int client, Handle cookie, int& value)
 {
 	char buffer[8];
 	GetClientCookie(client, cookie, buffer, sizeof(buffer));
@@ -375,5 +375,6 @@ stock bool GetClientCookieInt(int client, Handle cookie, int& value)
 	}
 
 	value = StringToInt(buffer);
+
 	return true;
 }
