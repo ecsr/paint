@@ -1,5 +1,3 @@
-#include <sourcemod>
-
 #include <clientprefs>
 #include <sdktools>
 
