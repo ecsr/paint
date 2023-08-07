@@ -52,7 +52,7 @@ public Plugin myinfo =
 	name = "Paint",
 	author = "SlidyBat, Eric",
 	description = "Allow players to paint on walls",
-	version = "3.0.0",
+	version = "3.0.1",
 	url = "https://github.com/ecsr/paint"
 };
 
